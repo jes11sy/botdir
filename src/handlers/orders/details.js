@@ -812,6 +812,22 @@ class OrderDetailsHandler {
         const orderId = ctx.match[1];
         const status = ctx.match[2];
         try {
+          // Проверяем текущий статус заказа
+          const orders = await db.searchOrder(orderId);
+          if (!orders || orders.length === 0) {
+            ctx.reply('❌ Заявка не найдена');
+            return;
+          }
+
+          const order = orders[0];
+          const currentStatus = order.status_order;
+          
+          // Если заказ уже закрыт, не позволяем повторно закрывать
+          if (['Готово', 'Отказ', 'Незаказ'].includes(currentStatus)) {
+            ctx.reply(`❌ Заявка #${orderId} уже закрыта со статусом "${currentStatus}". Повторное закрытие невозможно.`);
+            return;
+          }
+
           if (status === 'Готово') {
             await this.handleReadyStatus(ctx, orderId);
           } else if (status === 'Модерн') {
