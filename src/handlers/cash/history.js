@@ -107,9 +107,9 @@ class HistoryHandler {
     fileContent += `Итого расход: -${totalExpense} ₽\n`;
     fileContent += `Баланс: ${totalIncome - totalExpense} ₽\n\n`;
 
-    // Добавляем операции в файл
-    fileContent += `Дата\t\tТип\t\tСумма\t\tЗаметка\n`;
-    fileContent += `------------------------------------------------\n`;
+    // Добавляем операции в файл (Город, Дата, Тип, Назначение, Сумма, Заметка, Кто создал)
+    fileContent += `Город\tДата\t\tТип\tНазначение платежа\tСумма\t\tЗаметка\tКто создал\n`;
+    fileContent += `--------------------------------------------------------------------------------\n`;
     
     history.forEach((record) => {
       const date = new Date(record.date_create);
@@ -119,8 +119,11 @@ class HistoryHandler {
       const type = record.name === 'приход' ? 'приход' : 'расход';
       const amount = record.name === 'приход' ? `+${record.amount}` : `-${record.amount}`;
       const note = record.note || 'Нет заметки';
-      
-      fileContent += `${fullDateTime}\t${type}\t\t${amount} ₽\t\t${note}\n`;
+      const city = record.city || '-';
+      const paymentPurpose = record.payment_purpose || '-';
+      const createdBy = record.name_create || '-';
+
+      fileContent += `${city}\t${fullDateTime}\t${type}\t${paymentPurpose}\t${amount} ₽\t\t${note}\t${createdBy}\n`;
     });
 
     // Создаем временный файл
