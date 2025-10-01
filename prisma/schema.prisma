@@ -1,0 +1,227 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model CallcentreAdmin {
+  id        Int      @id @default(autoincrement())
+  login     String   @unique
+  password  String
+  note      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("callcentre_admin")
+}
+
+model CallcentreOperator {
+  id         Int      @id @default(autoincrement())
+  name       String
+  login      String   @unique
+  password   String
+  city       String
+  status     String
+  statusWork String   @map("status_work")
+  passport   String?
+  contract   String?
+  dateCreate DateTime @map("date_create")
+  note       String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  sipAddress String?  @map("sip_address")
+  calls      Call[]
+  orders     Order[]
+
+  @@map("callcentre_operator")
+}
+
+model Avito {
+  id                      Int       @id @default(autoincrement())
+  name                    String    @unique
+  clientId                String    @map("client_id")
+  clientSecret            String    @map("client_secret")
+  proxyType               String?   @map("proxy_type")
+  proxyHost               String?   @map("proxy_host")
+  proxyPort               Int?      @map("proxy_port")
+  proxyLogin              String?   @map("proxy_login")
+  proxyPassword           String?   @map("proxy_password")
+  connectionStatus        String?   @default("not_checked") @map("connection_status")
+  proxyStatus             String?   @default("not_checked") @map("proxy_status")
+  accountBalance          Float?    @default(0) @map("account_balance")
+  adsCount                Int?      @default(0) @map("ads_count")
+  viewsCount              Int?      @default(0) @map("views_count")
+  contactsCount           Int?      @default(0) @map("contacts_count")
+  viewsToday              Int?      @default(0) @map("views_today")
+  contactsToday           Int?      @default(0) @map("contacts_today")
+  lastSyncAt              DateTime? @map("last_sync_at")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+  userId                  String?   @map("user_id")
+  eternalOnlineEnabled    Boolean?  @default(false) @map("eternal_online_enabled")
+  isOnline                Boolean?  @default(false) @map("is_online")
+  lastOnlineCheck         DateTime? @map("last_online_check")
+  onlineKeepAliveInterval Int?      @default(300) @map("online_keep_alive_interval")
+  calls                   Call[]
+  orders                  Order[]
+
+  @@map("avito")
+}
+
+model Phone {
+  id        Int      @id @default(autoincrement())
+  number    String   @unique
+  rk        String
+  city      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  avitoName String?  @map("avito_name")
+  calls     Call[]
+
+  @@map("phones")
+}
+
+model Mango {
+  id          Int      @id @default(autoincrement())
+  callId      String   @unique @map("call_id")
+  phoneNumber String   @map("phone_number")
+  direction   String
+  duration    Int?
+  recordUrl   String?  @map("record_url")
+  status      String
+  mangoData   Json?    @map("mango_data")
+  createdAt   DateTime @default(now()) @map("created_at")
+  calls       Call[]
+
+  @@map("mango")
+}
+
+model Order {
+  id             Int                @id @default(autoincrement())
+  rk             String
+  city           String
+  avitoName      String?            @map("avito_name")
+  phone          String
+  typeOrder      String             @map("type_order")
+  clientName     String             @map("client_name")
+  address        String
+  dateMeeting    DateTime           @map("date_meeting")
+  typeEquipment  String             @map("type_equipment")
+  problem        String
+  callRecord     String?            @map("call_record")
+  statusOrder    String             @map("status_order")
+  masterId       Int?               @map("master_id")
+  result         Decimal?           @db.Decimal(10, 2)
+  expenditure    Decimal?           @db.Decimal(10, 2)
+  clean          Decimal?           @db.Decimal(10, 2)
+  masterChange   Decimal?           @map("master_change") @db.Decimal(10, 2)
+  bsoDoc         String?            @map("bso_doc")
+  expenditureDoc String?            @map("expenditure_doc")
+  operatorNameId Int                @map("operator_name_id")
+  createDate     DateTime           @map("create_date")
+  closingData    DateTime?          @map("closing_data")
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+  avitoChatId    String?            @map("avito_chatid")
+  callId         String?            @map("call_id")
+  avito          Avito?             @relation(fields: [avitoName], references: [name])
+  operator       CallcentreOperator @relation(fields: [operatorNameId], references: [id])
+  master         Master?            @relation(fields: [masterId], references: [id])
+
+  @@map("orders")
+}
+
+model Call {
+  id                   Int                @id @default(autoincrement())
+  rk                   String
+  city                 String
+  avitoName            String?            @map("avito_name")
+  phoneClient          String             @map("phone_client")
+  phoneAts             String             @map("phone_ats")
+  dateCreate           DateTime           @map("date_create")
+  operatorId           Int                @map("operator_id")
+  status               String
+  mangoCallId          Int?               @map("mango_call_id")
+  createdAt            DateTime           @default(now()) @map("created_at")
+  updatedAt            DateTime           @updatedAt @map("updated_at")
+  recordingEmailSent   Boolean            @default(false) @map("recording_email_sent")
+  recordingPath        String?            @map("recording_path")
+  recordingProcessedAt DateTime?          @map("recording_processed_at")
+  avito                Avito?             @relation(fields: [avitoName], references: [name])
+  mango                Mango?             @relation(fields: [mangoCallId], references: [id])
+  operator             CallcentreOperator @relation(fields: [operatorId], references: [id])
+  phone                Phone              @relation(fields: [phoneAts], references: [number])
+
+  @@map("calls")
+}
+
+model EmailSettings {
+  id            Int      @id @default(autoincrement())
+  host          String
+  port          Int
+  secure        Boolean  @default(true)
+  user          String
+  password      String
+  mangoEmail    String   @map("mango_email")
+  checkInterval Int      @default(5) @map("check_interval")
+  enabled       Boolean  @default(false)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("email_settings")
+}
+
+model Director {
+  id           Int      @id @default(autoincrement())
+  cities       String[] // Массив городов
+  name         String
+  login        String   @unique
+  password     String
+  contractDoc  String?  @map("contract_doc")
+  passportDoc  String?  @map("passport_doc")
+  dateCreate   DateTime @default(now()) @map("date_create")
+  note         String?
+  tgId         String?  @map("tg_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("director")
+}
+
+model Master {
+  id           Int      @id @default(autoincrement())
+  cities       String[] // Массив городов
+  name         String
+  passportDoc  String?  @map("passport_doc")
+  contractDoc  String?  @map("contract_doc")
+  statusWork   String   @map("status_work")
+  dateCreate   DateTime @default(now()) @map("date_create")
+  note         String?
+  tgId         String?  @map("tg_id")
+  chatId       String?  @map("chat_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  
+  orders       Order[]
+
+  @@map("master")
+}
+
+model Cash {
+  id             Int      @id @default(autoincrement())
+  name           String   // "приход" или "расход"
+  amount         Decimal  @db.Decimal(10, 2)
+  city           String?  @default("Москва")
+  note           String?
+  receiptDoc     String?  @map("receipt_doc")
+  paymentPurpose String?  @map("payment_purpose") // назначение платежа
+  dateCreate     DateTime @default(now()) @map("date_create")
+  nameCreate     String   @map("name_create")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("cash")
+}

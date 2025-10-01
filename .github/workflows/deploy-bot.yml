@@ -1,0 +1,77 @@
+name: Deploy Telegram Bot
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'src/**'
+      - 'bot.js'
+      - 'webhook-server.js'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'prisma/**'
+      - 'config.js'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Generate Prisma Client
+      run: npx prisma generate
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        
+    - name: Run database migrations
+      run: npx prisma migrate deploy
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        
+    - name: Deploy to server
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.BOT_HOST }}
+        username: ${{ secrets.BOT_USERNAME }}
+        key: ${{ secrets.BOT_SSH_KEY }}
+        port: ${{ secrets.BOT_SSH_PORT || 22 }}
+        script: |
+          # Переходим в директорию бота
+          cd ${{ secrets.BOT_DEPLOY_PATH }}
+          
+          # Останавливаем бота
+          pm2 stop bot || true
+          pm2 stop webhook || true
+          
+          # Обновляем код
+          git pull origin main
+          
+          # Устанавливаем зависимости
+          npm ci --production
+          
+          # Генерируем Prisma клиент
+          npx prisma generate
+          
+          # Применяем миграции
+          npx prisma migrate deploy
+          
+          # Запускаем бота
+          pm2 start ecosystem.config.js --env production
+          
+          # Сохраняем конфигурацию PM2
+          pm2 save
+          
+          # Показываем статус
+          pm2 status
