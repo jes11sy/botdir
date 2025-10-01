@@ -160,10 +160,17 @@ class ModernOrdersHandler {
       ]);
 
       // Отправляем полную заявку с кнопками мастеру
-      await ctx.telegram.sendMessage(master.chat_id, message, {
+      const sentMessage = await ctx.telegram.sendMessage(master.chat_id, message, {
         parse_mode: 'Markdown',
         ...keyboard
       });
+
+      // Сохраняем ID сообщения в глобальной переменной для последующего удаления
+      global.orderMessages = global.orderMessages || {};
+      global.orderMessages[orderId] = {
+        messageId: sentMessage.message_id,
+        chatId: master.chat_id
+      };
 
       // Подтверждаем директору
       ctx.reply(`✅ Напоминание с заявкой отправлено мастеру ${master.name} по заявке #${orderId}`);
