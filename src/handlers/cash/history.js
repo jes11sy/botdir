@@ -130,7 +130,7 @@ class HistoryHandler {
       const createdBy = record.name_create || '-';
 
       // Форматируем с фиксированной шириной колонок
-      fileContent += `${city}${fullDateTime.padEnd(20)}${type.padEnd(10)}${paymentPurpose}${amount.padEnd(12)} ₽${note.padEnd(15)}${createdBy}\n`;
+      fileContent += `${city}${fullDateTime.padEnd(20)}${type.padEnd(10)}${paymentPurpose}${amount} ₽${note.padEnd(15)}${createdBy}\n`;
     });
 
     // Создаем временный файл
