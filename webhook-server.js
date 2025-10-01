@@ -15,10 +15,14 @@ async function sendNewOrderNotification(tgId, orderId, dateMeeting) {
       return;
     }
 
-    // Форматируем дату
+    // Форматируем дату (показываем время как есть, без конвертации часового пояса)
     const date = new Date(dateMeeting);
     const dateStr = date.toLocaleDateString('ru-RU');
-    const timeStr = date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    const timeStr = date.toLocaleTimeString('ru-RU', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      timeZone: 'UTC'  // Показываем UTC время
+    });
 
     const message = `🆕 Новый заказ №${orderId} ${dateStr} ${timeStr}`;
 
@@ -51,10 +55,14 @@ async function sendTelegramNotification(tgId, orderId, newDate) {
       return;
     }
 
-    // Форматируем дату
+    // Форматируем дату (показываем время как есть, без конвертации часового пояса)
     const date = new Date(newDate);
     const dateStr = date.toLocaleDateString('ru-RU');
-    const timeStr = date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    const timeStr = date.toLocaleTimeString('ru-RU', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      timeZone: 'UTC'  // Показываем UTC время
+    });
 
     const message = `📅 Заказ №${orderId} перенесен на ${dateStr} ${timeStr}`;
 
