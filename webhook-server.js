@@ -9,7 +9,7 @@ app.use(express.json());
 // Функция отправки уведомления о новой заявке в Telegram
 async function sendNewOrderNotification(tgId, orderId, dateMeeting) {
   try {
-    const botToken = '8279544545:AAG1iP_qRZbrA02CKbi2BuUeOhk72focEAM';
+    const botToken = process.env.BOT_TOKEN;
     if (!botToken) {
       console.error('❌ BOT_TOKEN не установлен');
       return;
@@ -45,7 +45,7 @@ async function sendNewOrderNotification(tgId, orderId, dateMeeting) {
 // Функция отправки уведомления в Telegram
 async function sendTelegramNotification(tgId, orderId, newDate) {
   try {
-       const botToken = '8279544545:AAG1iP_qRZbrA02CKbi2BuUeOhk72focEAM';
+    const botToken = process.env.BOT_TOKEN;
     if (!botToken) {
       console.error('❌ BOT_TOKEN не установлен');
       return;
@@ -143,7 +143,7 @@ app.post('/webhook/new-order', async (req, res) => {
     const { orderId, city, dateMeeting, token } = req.body;
 
     // Проверка токена безопасности
-    if (token !== 'your_webhook_secret_token') {
+    if (token !== process.env.WEBHOOK_TOKEN) {
       console.log('❌ Неверный токен webhook');
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
