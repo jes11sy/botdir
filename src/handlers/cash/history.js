@@ -107,8 +107,8 @@ class HistoryHandler {
     fileContent += `Итого расход: -${totalExpense} ₽\n`;
     fileContent += `Баланс: ${totalIncome - totalExpense} ₽\n\n`;
 
-    // Добавляем операции в файл (Город, Дата, Тип, Назначение, Сумма, Заметка, Кто создал)
-    fileContent += `Город\t\tДата\t\t\tТип\t\tНазначение\t\tСумма\t\tЗаметка\t\t\tКто создал\n`;
+    // Добавляем операции в файл с фиксированной шириной колонок
+    fileContent += `Город        Дата                Тип        Назначение        Сумма        Заметка        Кто создал\n`;
     fileContent += `================================================================================\n`;
     
     history.forEach((record) => {
@@ -125,12 +125,12 @@ class HistoryHandler {
         note = 'Закрытие заказа';
       }
       
-      const city = record.city || '-';
-      const paymentPurpose = record.payment_purpose || '-';
-      
+      const city = (record.city || '-').padEnd(12);
+      const paymentPurpose = (record.payment_purpose || '-').padEnd(16);
       const createdBy = record.name_create || '-';
 
-      fileContent += `${city}\t\t${fullDateTime}\t${type}\t\t${paymentPurpose}\t\t${amount} ₽\t\t${note}\t\t${createdBy}\n`;
+      // Форматируем с фиксированной шириной колонок
+      fileContent += `${city}${fullDateTime.padEnd(20)}${type.padEnd(10)}${paymentPurpose}${amount.padEnd(12)} ₽${note.padEnd(15)}${createdBy}\n`;
     });
 
     // Создаем временный файл
