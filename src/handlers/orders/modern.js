@@ -153,12 +153,10 @@ class ModernOrdersHandler {
       message += `📅 *Дата встречи:* ${dateStr} ${timeStr}\n\n`;
       message += `👨‍🔧 *Назначен мастер:* ${master.name}`;
 
-      // Создаем кнопки для мастера
+      // Создаем кнопки для мастера (только Готово и Отказ)
       const keyboard = Markup.inlineKeyboard([
         [Markup.button.callback('✅ Готово', `final_status_${orderId}_Готово`)],
-        [Markup.button.callback('❌ Отказ', `final_status_${orderId}_Отказ`)],
-        [Markup.button.callback('🔄 Модерн', `final_status_${orderId}_Модерн`)],
-        [Markup.button.callback('🚫 Незаказ', `final_status_${orderId}_Незаказ`)]
+        [Markup.button.callback('❌ Отказ', `final_status_${orderId}_Отказ`)]
       ]);
 
       // Отправляем полную заявку с кнопками мастеру
