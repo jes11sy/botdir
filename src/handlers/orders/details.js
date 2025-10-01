@@ -633,14 +633,14 @@ class OrderDetailsHandler {
           VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), NOW())
         `, [
           'приход',
-          result,  // итог по заказу
+          masterChange,  // сдача мастера
           order.city,
           `${masterName} - Итог по заказу: ${result}₽`,
           'Система Бот',
           `Заказ №${orderId}`
         ]);
         
-        console.log(`✅ Добавлена запись в кассу: приход ${result} руб. по заказу №${orderId}`);
+        console.log(`✅ Добавлена запись в кассу: приход ${masterChange} руб. по заказу №${orderId}`);
       } catch (error) {
         console.error('Ошибка при добавлении записи в кассу:', error);
         // Не прерываем выполнение, просто логируем ошибку
