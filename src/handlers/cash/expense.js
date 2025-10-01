@@ -19,15 +19,15 @@ class ExpenseHandler {
         return;
       }
 
-      // Если только один город, сразу переходим к вводу суммы
+      // Если только один город, сразу переходим к выбору назначения платежа
       if (directorInfo.cities.length === 1) {
         ctx.session = ctx.session || {};
         ctx.session.expenseData = { 
           city: directorInfo.cities[0],
           director: directorInfo.name
         };
-        ctx.session.expenseStep = 'amount';
-        ctx.reply('💸 Введите сумму расхода:');
+        ctx.session.expenseStep = 'payment_purpose';
+        await this.showPaymentPurposeSelection(ctx);
         return;
       }
 
@@ -92,12 +92,67 @@ class ExpenseHandler {
       
       // Сохраняем выбранный город
       ctx.session.expenseData.city = selectedCity;
-      ctx.session.expenseStep = 'amount';
+      ctx.session.expenseStep = 'payment_purpose';
       
-      ctx.reply(`💸 Введите сумму расхода (Город: ${selectedCity}):`);
+      await this.showPaymentPurposeSelection(ctx);
     } catch (error) {
       console.error('Ошибка при выборе города:', error);
       ctx.reply('Ошибка при выборе города');
+    }
+  }
+
+  // Показать выбор назначения платежа
+  async showPaymentPurposeSelection(ctx) {
+    const paymentPurposes = [
+      'Авито',
+      'Офис', 
+      'Промоутеры',
+      'Листовки',
+      'Инкас',
+      'Зарплата директора',
+      'Иное'
+    ];
+    
+    let message = `💳 *Выберите назначение платежа:*\n\n`;
+    
+    const buttons = paymentPurposes.map((purpose, index) => {
+      return Markup.button.callback(
+        `💳 ${purpose}`,
+        `select_payment_purpose_${index}`
+      );
+    });
+
+    const keyboard = Markup.inlineKeyboard(buttons, { columns: 2 });
+
+    ctx.reply(message, {
+      parse_mode: 'Markdown',
+      ...keyboard
+    });
+  }
+
+  // Обработка выбора назначения платежа
+  async selectPaymentPurpose(ctx, purposeIndex) {
+    try {
+      const paymentPurposes = [
+        'Авито',
+        'Офис', 
+        'Промоутеры',
+        'Листовки',
+        'Инкас',
+        'Зарплата директора',
+        'Иное'
+      ];
+
+      const selectedPurpose = paymentPurposes[purposeIndex];
+      
+      // Сохраняем выбранное назначение платежа
+      ctx.session.expenseData.paymentPurpose = selectedPurpose;
+      ctx.session.expenseStep = 'amount';
+      
+      ctx.reply(`💸 Введите сумму расхода (Город: ${ctx.session.expenseData.city}, Назначение: ${selectedPurpose}):`);
+    } catch (error) {
+      console.error('Ошибка при выборе назначения платежа:', error);
+      ctx.reply('Ошибка при выборе назначения платежа');
     }
   }
 
@@ -157,6 +212,7 @@ class ExpenseHandler {
     
     let message = `📋 *Запись Расхода*\n\n`;
     message += `🏙️ *Город:* ${data.city}\n`;
+    message += `💳 *Назначение:* ${data.paymentPurpose}\n`;
     message += `💰 *Сумма:* ${data.amount} ₽\n`;
     message += `📝 *Примечание:* ${data.note}\n`;
     message += `👤 *Директор:* ${data.director}\n`;
@@ -178,12 +234,23 @@ class ExpenseHandler {
     try {
       const data = ctx.session.expenseData;
       
-      // Добавляем расход в БД
-      await db.addCashOperation('расход', data.amount, data.city, data.note, data.director);
+      // Добавляем расход в БД с назначением платежа
+      await db.getClient().query(`
+        INSERT INTO cash (name, amount, city, note, name_create, payment_purpose, date_create, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), NOW())
+      `, [
+        'расход',
+        data.amount,
+        data.city,
+        data.note,
+        data.director,
+        data.paymentPurpose
+      ]);
       
       // Редактируем сообщение с подтверждением
       let message = `📋 *Запись Расхода*\n\n`;
       message += `🏙️ *Город:* ${data.city}\n`;
+      message += `💳 *Назначение:* ${data.paymentPurpose}\n`;
       message += `💰 *Сумма:* ${data.amount} ₽\n`;
       message += `📝 *Примечание:* ${data.note}\n`;
       message += `👤 *Директор:* ${data.director}\n`;
@@ -244,6 +311,12 @@ class ExpenseHandler {
     bot.action(/^select_city_expense_(\d+)$/, (ctx) => {
       const cityIndex = parseInt(ctx.match[1]);
       this.selectCity(ctx, cityIndex);
+    });
+
+    // Обработка выбора назначения платежа
+    bot.action(/^select_payment_purpose_(\d+)$/, (ctx) => {
+      const purposeIndex = parseInt(ctx.match[1]);
+      this.selectPaymentPurpose(ctx, purposeIndex);
     });
 
     // Обработка кнопок подтверждения
