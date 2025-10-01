@@ -425,6 +425,13 @@ class OrderDetailsHandler {
           parse_mode: 'Markdown',
           ...keyboard
         });
+
+        // Сохраняем ID сообщения в глобальной переменной для последующего удаления
+        global.orderMessages = global.orderMessages || {};
+        global.orderMessages[orderId] = {
+          messageId: ctx.callbackQuery.message.message_id,
+          chatId: ctx.chat.id
+        };
     } catch (error) {
       console.error('Ошибка при статусе "В работе":', error);
       ctx.reply('Ошибка при статусе "В работе"');
