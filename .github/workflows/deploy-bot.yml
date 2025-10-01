@@ -3,14 +3,6 @@ name: Deploy Telegram Bot
 on:
   push:
     branches: [ main, master ]
-    paths:
-      - 'src/**'
-      - 'bot.js'
-      - 'webhook-server.js'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'prisma/**'
-      - 'config.js'
   workflow_dispatch:
 
 jobs:
