@@ -129,8 +129,8 @@ class HistoryHandler {
       const paymentPurpose = (record.payment_purpose || '-').padEnd(16);
       const createdBy = record.name_create || '-';
 
-      // Форматируем с фиксированной шириной колонок
-      fileContent += `${city}${fullDateTime.padEnd(20)}${type.padEnd(10)}${paymentPurpose}${amount} ₽${note.padEnd(15)}${createdBy}\n`;
+      // Форматируем с правильными отступами между колонками
+      fileContent += `${city}${fullDateTime.padEnd(20)}${type.padEnd(10)}${paymentPurpose}${amount} ₽    ${note.padEnd(15)}${createdBy}\n`;
     });
 
     // Создаем временный файл
