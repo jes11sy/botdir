@@ -134,23 +134,41 @@ class ModernOrdersHandler {
         return;
       }
 
-      // Формируем текст напоминания
+      // Формируем полное сообщение заявки с кнопками
       const meetingDate = new Date(order.date_meeting);
       const dateStr = meetingDate.toLocaleDateString('ru-RU');
       const timeStr = meetingDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 
-      let reminder = `🔔 Напоминание по заявке\n\n`;
-      reminder += `📋 №${order.id} | ${order.status_order}\n`;
-      reminder += `📅 ${dateStr} ${timeStr}\n`;
-      reminder += `👤 ${order.client_name} | ${order.phone}\n`;
-      reminder += `📍 ${order.address}\n`;
-      if (order.problem) reminder += `⚠️ ${order.problem}\n`;
+      let message = `🔔 *Напоминание по заявке*\n\n`;
+      message += `📋 *№${order.id}* | ${order.status_order}\n\n`;
+      message += `🏢 *РК:* ${order.rk}\n`;
+      message += `🏙️ *Город:* ${order.city}\n`;
+      message += `👨‍🔧 *Имя мастера:* ${order.avito_name || 'Не указано'}\n`;
+      message += `📝 *Тип заявки:* ${order.type_order}\n\n`;
+      message += `👤 *Имя клиента:* ${order.client_name}\n`;
+      message += `📞 *Телефон:* \`${order.phone}\`\n`;
+      message += `📍 *Адрес:* ${order.address}\n\n`;
+      message += `🔧 *Тип техники:* ${order.type_equipment}\n`;
+      message += `⚠️ *Проблема:* ${order.problem}\n\n`;
+      message += `📅 *Дата встречи:* ${dateStr} ${timeStr}\n\n`;
+      message += `👨‍🔧 *Назначен мастер:* ${master.name}`;
 
-      // Отправляем напоминание мастеру
-      await ctx.telegram.sendMessage(master.chat_id, reminder);
+      // Создаем кнопки для мастера
+      const keyboard = Markup.inlineKeyboard([
+        [Markup.button.callback('✅ Готово', `final_status_${orderId}_Готово`)],
+        [Markup.button.callback('❌ Отказ', `final_status_${orderId}_Отказ`)],
+        [Markup.button.callback('🔄 Модерн', `final_status_${orderId}_Модерн`)],
+        [Markup.button.callback('🚫 Незаказ', `final_status_${orderId}_Незаказ`)]
+      ]);
+
+      // Отправляем полную заявку с кнопками мастеру
+      await ctx.telegram.sendMessage(master.chat_id, message, {
+        parse_mode: 'Markdown',
+        ...keyboard
+      });
 
       // Подтверждаем директору
-      ctx.reply(`✅ Напоминание отправлено мастеру ${master.name} по заявке #${orderId}`);
+      ctx.reply(`✅ Напоминание с заявкой отправлено мастеру ${master.name} по заявке #${orderId}`);
     } catch (error) {
       console.error('Ошибка при отправке напоминания:', error);
       ctx.reply('Ошибка при отправке напоминания');
