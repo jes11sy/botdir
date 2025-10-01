@@ -126,12 +126,7 @@ class HistoryHandler {
       }
       
       const city = record.city || '-';
-      
-      // Обрабатываем назначение платежа - убираем номер заказа
-      let paymentPurpose = record.payment_purpose || '-';
-      if (paymentPurpose.startsWith('Заказ №')) {
-        paymentPurpose = 'Заказ';
-      }
+      const paymentPurpose = record.payment_purpose || '-';
       
       const createdBy = record.name_create || '-';
 
