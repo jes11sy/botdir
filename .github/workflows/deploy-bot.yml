@@ -83,25 +83,36 @@ jobs:
           
           # Устанавливаем зависимости
           echo "📦 Устанавливаем зависимости..."
-          npm ci --production
+          rm -rf node_modules package-lock.json
+          npm install --production
           
           # Генерируем Prisma клиент
           echo "🔧 Генерируем Prisma клиент..."
-          npx prisma generate
+          if command -v npx >/dev/null 2>&1; then
+            npx prisma generate
+          else
+            echo "❌ npx не найден, устанавливаем Prisma глобально..."
+            npm install -g prisma @prisma/client
+            prisma generate
+          fi
           
           # Применяем миграции (если нужно)
           echo "🗄️ Проверяем миграции..."
-          npx prisma migrate status || {
-            echo "Создаем baseline для существующей БД..."
-            npx prisma migrate resolve --applied "20250920143952_add_today_stats_to_avito" || true
-            npx prisma migrate resolve --applied "20250923071207_add_master_change_field" || true
-            npx prisma migrate resolve --applied "20250923071427_recreate_database" || true
-            npx prisma migrate resolve --applied "add_city_to_cash" || true
-            npx prisma migrate resolve --applied "add_master_change_manual" || true
-            npx prisma migrate resolve --applied "add_tg_id_chat_id_to_master" || true
-            npx prisma migrate resolve --applied "add_tg_id_to_director" || true
-          }
-          npx prisma migrate deploy
+          if command -v npx >/dev/null 2>&1; then
+            npx prisma migrate status || {
+              echo "Создаем baseline для существующей БД..."
+              npx prisma migrate resolve --applied "20250920143952_add_today_stats_to_avito" || true
+              npx prisma migrate resolve --applied "20250923071207_add_master_change_field" || true
+              npx prisma migrate resolve --applied "20250923071427_recreate_database" || true
+              npx prisma migrate resolve --applied "add_city_to_cash" || true
+              npx prisma migrate resolve --applied "add_master_change_manual" || true
+              npx prisma migrate resolve --applied "add_tg_id_chat_id_to_master" || true
+              npx prisma migrate resolve --applied "add_tg_id_to_director" || true
+            }
+            npx prisma migrate deploy
+          else
+            echo "❌ Пропускаем миграции - Prisma не установлен"
+          fi
           
           # Запускаем бота с переменными окружения
           echo "🚀 Запускаем бота..."
