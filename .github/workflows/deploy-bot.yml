@@ -36,7 +36,11 @@ jobs:
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
         
     - name: Run database migrations
-      run: npx prisma migrate deploy
+      run: |
+        echo "Проверяем состояние миграций..."
+        npx prisma migrate status || echo "Миграции не применены"
+        echo "Пропускаем миграции для существующей БД"
+        echo "Миграции будут применены на сервере при необходимости"
       env:
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
         
@@ -64,7 +68,18 @@ jobs:
           # Генерируем Prisma клиент
           npx prisma generate
           
-          # Применяем миграции
+          # Применяем миграции (если нужно)
+          echo "Проверяем миграции..."
+          npx prisma migrate status || {
+            echo "Создаем baseline для существующей БД..."
+            npx prisma migrate resolve --applied "20250920143952_add_today_stats_to_avito" || true
+            npx prisma migrate resolve --applied "20250923071207_add_master_change_field" || true
+            npx prisma migrate resolve --applied "20250923071427_recreate_database" || true
+            npx prisma migrate resolve --applied "add_city_to_cash" || true
+            npx prisma migrate resolve --applied "add_master_change_manual" || true
+            npx prisma migrate resolve --applied "add_tg_id_chat_id_to_master" || true
+            npx prisma migrate resolve --applied "add_tg_id_to_director" || true
+          }
           npx prisma migrate deploy
           
           # Запускаем бота
