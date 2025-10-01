@@ -8,14 +8,24 @@ class Database {
   async connect() {
     try {
       console.log('🔍 DATABASE_URL:', process.env.DATABASE_URL);
-      this.pool = new Pool({
-        host: 'localhost',
-        port: 5432,
-        database: 'callcentre_crm',
-        user: 'postgres',
-        password: '1740',
-        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-      });
+      
+      // Используем DATABASE_URL если он есть, иначе fallback на старые настройки
+      if (process.env.DATABASE_URL) {
+        this.pool = new Pool({
+          connectionString: process.env.DATABASE_URL,
+          ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+        });
+      } else {
+        // Fallback для локальной разработки
+        this.pool = new Pool({
+          host: 'localhost',
+          port: 5432,
+          database: 'callcentre_crm',
+          user: 'postgres',
+          password: '1740',
+          ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+        });
+      }
       
       // Тестируем подключение
       const client = await this.pool.connect();
