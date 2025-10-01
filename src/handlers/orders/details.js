@@ -620,16 +620,27 @@ class OrderDetailsHandler {
         const orders = await db.searchOrder(orderId);
         const order = orders[0];
         
-        // Добавляем запись в cash
-        await db.addCashOperation(
-          'приход',
-          masterChange,
-          order.city,
-          `Приход по заказу №${orderId}`,
-          'Telegram bot'
-        );
+        // Получаем информацию о мастере для note
+        const masters = await db.getClient().query(`
+          SELECT name FROM master WHERE id = $1
+        `, [order.master_id]);
         
-        console.log(`✅ Добавлена запись в кассу: приход ${masterChange} руб. по заказу №${orderId}`);
+        const masterName = masters.rows.length > 0 ? masters.rows[0].name : 'Не указано';
+        
+        // Добавляем запись в cash с правильными полями
+        await db.getClient().query(`
+          INSERT INTO cash (name, amount, city, note, name_create, payment_purpose, date_create, created_at, updated_at)
+          VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), NOW())
+        `, [
+          'приход',
+          result,  // итог по заказу
+          order.city,
+          `${masterName} БТ - Итог по заказу: ${result}₽`,
+          'Система Бот',
+          `Заказ №${orderId}`
+        ]);
+        
+        console.log(`✅ Добавлена запись в кассу: приход ${result} руб. по заказу №${orderId}`);
       } catch (error) {
         console.error('Ошибка при добавлении записи в кассу:', error);
         // Не прерываем выполнение, просто логируем ошибку
