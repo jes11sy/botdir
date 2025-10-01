@@ -102,8 +102,55 @@ class ModernOrdersHandler {
   // Напомнить мастеру
   async remindMaster(ctx, orderId) {
     try {
-      // Здесь будет логика отправки напоминания мастеру
-      ctx.reply(`🔔 Напоминание отправлено мастеру по заявке #${orderId}`);
+      // Получаем заявку
+      const orders = await db.searchOrder(orderId);
+      if (!orders || orders.length === 0) {
+        ctx.reply('❌ Заявка не найдена');
+        return;
+      }
+
+      const order = orders[0];
+
+      // Получаем мастера
+      if (!order.master_id) {
+        ctx.reply('❌ У заявки не назначен мастер');
+        return;
+      }
+
+      const masters = await db.getClient().query(`
+        SELECT id, name, chat_id, tg_id
+        FROM master
+        WHERE id = $1
+      `, [order.master_id]);
+
+      if (!masters.rows.length) {
+        ctx.reply('❌ Мастер не найден');
+        return;
+      }
+
+      const master = masters.rows[0];
+      if (!master.chat_id) {
+        ctx.reply(`❌ У мастера ${master.name} не указан chat_id. Напоминание не отправлено.`);
+        return;
+      }
+
+      // Формируем текст напоминания
+      const meetingDate = new Date(order.date_meeting);
+      const dateStr = meetingDate.toLocaleDateString('ru-RU');
+      const timeStr = meetingDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+
+      let reminder = `🔔 Напоминание по заявке\n\n`;
+      reminder += `📋 №${order.id} | ${order.status_order}\n`;
+      reminder += `📅 ${dateStr} ${timeStr}\n`;
+      reminder += `👤 ${order.client_name} | ${order.phone}\n`;
+      reminder += `📍 ${order.address}\n`;
+      if (order.problem) reminder += `⚠️ ${order.problem}\n`;
+
+      // Отправляем напоминание мастеру
+      await ctx.telegram.sendMessage(master.chat_id, reminder);
+
+      // Подтверждаем директору
+      ctx.reply(`✅ Напоминание отправлено мастеру ${master.name} по заявке #${orderId}`);
     } catch (error) {
       console.error('Ошибка при отправке напоминания:', error);
       ctx.reply('Ошибка при отправке напоминания');
