@@ -635,7 +635,7 @@ class OrderDetailsHandler {
           'приход',
           result,  // итог по заказу
           order.city,
-          `${masterName} БТ - Итог по заказу: ${result}₽`,
+          `${masterName} - Итог по заказу: ${result}₽`,
           'Система Бот',
           `Заказ №${orderId}`
         ]);
