@@ -108,8 +108,8 @@ class HistoryHandler {
     fileContent += `Баланс: ${totalIncome - totalExpense} ₽\n\n`;
 
     // Добавляем операции в файл (Город, Дата, Тип, Назначение, Сумма, Заметка, Кто создал)
-    fileContent += `Город\tДата\t\tТип\tНазначение платежа\tСумма\t\tЗаметка\tКто создал\n`;
-    fileContent += `--------------------------------------------------------------------------------\n`;
+    fileContent += `Город\t\tДата\t\t\tТип\t\tНазначение\t\tСумма\t\tЗаметка\t\t\tКто создал\n`;
+    fileContent += `================================================================================\n`;
     
     history.forEach((record) => {
       const date = new Date(record.date_create);
@@ -118,12 +118,24 @@ class HistoryHandler {
       const fullDateTime = `${dateStr} ${timeStr}`;
       const type = record.name === 'приход' ? 'приход' : 'расход';
       const amount = record.name === 'приход' ? `+${record.amount}` : `-${record.amount}`;
-      const note = record.note || 'Нет заметки';
+      
+      // Обрабатываем заметку - убираем лишний текст для заказов
+      let note = record.note || 'Нет заметки';
+      if (note.includes('БТ - Итог по заказу:')) {
+        note = 'Закрытие заказа';
+      }
+      
       const city = record.city || '-';
-      const paymentPurpose = record.payment_purpose || '-';
+      
+      // Обрабатываем назначение платежа - убираем номер заказа
+      let paymentPurpose = record.payment_purpose || '-';
+      if (paymentPurpose.startsWith('Заказ №')) {
+        paymentPurpose = 'Заказ';
+      }
+      
       const createdBy = record.name_create || '-';
 
-      fileContent += `${city}\t${fullDateTime}\t${type}\t${paymentPurpose}\t${amount} ₽\t\t${note}\t${createdBy}\n`;
+      fileContent += `${city}\t\t${fullDateTime}\t${type}\t\t${paymentPurpose}\t\t${amount} ₽\t\t${note}\t\t${createdBy}\n`;
     });
 
     // Создаем временный файл
