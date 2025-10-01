@@ -19,15 +19,15 @@ class IncomeHandler {
         return;
       }
 
-      // Если только один город, сразу переходим к вводу суммы
+      // Если только один город, сразу переходим к выбору назначения платежа
       if (directorInfo.cities.length === 1) {
         ctx.session = ctx.session || {};
         ctx.session.incomeData = { 
           city: directorInfo.cities[0],
           director: directorInfo.name
         };
-        ctx.session.incomeStep = 'amount';
-        ctx.reply('💰 Введите сумму прихода:');
+        ctx.session.incomeStep = 'payment_purpose';
+        await this.showPaymentPurposeSelection(ctx);
         return;
       }
 
@@ -79,12 +79,61 @@ class IncomeHandler {
       
       // Сохраняем выбранный город
       ctx.session.incomeData.city = selectedCity;
-      ctx.session.incomeStep = 'amount';
+      ctx.session.incomeStep = 'payment_purpose';
       
-      ctx.reply(`💰 Введите сумму прихода (Город: ${selectedCity}):`);
+      await this.showPaymentPurposeSelection(ctx);
     } catch (error) {
       console.error('Ошибка при выборе города:', error);
       ctx.reply('Ошибка при выборе города');
+    }
+  }
+
+  // Показать выбор назначения платежа
+  async showPaymentPurposeSelection(ctx) {
+    const paymentPurposes = [
+      'Заказ',
+      'Депозит',
+      'Штраф',
+      'Иное'
+    ];
+    
+    let message = `💳 *Выберите назначение платежа:*\n\n`;
+    
+    const buttons = paymentPurposes.map((purpose, index) => {
+      return Markup.button.callback(
+        `💳 ${purpose}`,
+        `select_income_payment_purpose_${index}`
+      );
+    });
+
+    const keyboard = Markup.inlineKeyboard(buttons, { columns: 2 });
+
+    ctx.reply(message, {
+      parse_mode: 'Markdown',
+      ...keyboard
+    });
+  }
+
+  // Обработка выбора назначения платежа
+  async selectPaymentPurpose(ctx, purposeIndex) {
+    try {
+      const paymentPurposes = [
+        'Заказ',
+        'Депозит',
+        'Штраф',
+        'Иное'
+      ];
+
+      const selectedPurpose = paymentPurposes[purposeIndex];
+      
+      // Сохраняем выбранное назначение платежа
+      ctx.session.incomeData.paymentPurpose = selectedPurpose;
+      ctx.session.incomeStep = 'amount';
+      
+      ctx.reply(`💰 Введите сумму прихода (Город: ${ctx.session.incomeData.city}, Назначение: ${selectedPurpose}):`);
+    } catch (error) {
+      console.error('Ошибка при выборе назначения платежа:', error);
+      ctx.reply('Ошибка при выборе назначения платежа');
     }
   }
 
@@ -143,6 +192,7 @@ class IncomeHandler {
     
     let message = `📋 *Запись Прихода*\n\n`;
     message += `🏙️ *Город:* ${data.city}\n`;
+    message += `💳 *Назначение:* ${data.paymentPurpose}\n`;
     message += `💰 *Сумма:* ${data.amount} ₽\n`;
     message += `📝 *Примечание:* ${data.note}\n`;
     message += `👤 *Директор:* ${data.director}\n`;
@@ -164,12 +214,23 @@ class IncomeHandler {
     try {
       const data = ctx.session.incomeData;
       
-      // Добавляем приход в БД
-      await db.addCashOperation('приход', data.amount, data.city, data.note, data.director);
+      // Добавляем приход в БД с назначением платежа
+      await db.getClient().query(`
+        INSERT INTO cash (name, amount, city, note, name_create, payment_purpose, date_create, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), NOW())
+      `, [
+        'приход',
+        data.amount,
+        data.city,
+        data.note,
+        data.director,
+        data.paymentPurpose
+      ]);
       
       // Редактируем сообщение с подтверждением
       let message = `📋 *Запись Прихода*\n\n`;
       message += `🏙️ *Город:* ${data.city}\n`;
+      message += `💳 *Назначение:* ${data.paymentPurpose}\n`;
       message += `💰 *Сумма:* ${data.amount} ₽\n`;
       message += `📝 *Примечание:* ${data.note}\n`;
       message += `👤 *Директор:* ${data.director}\n`;
@@ -230,6 +291,12 @@ class IncomeHandler {
     bot.action(/^select_city_income_(\d+)$/, (ctx) => {
       const cityIndex = parseInt(ctx.match[1]);
       this.selectCity(ctx, cityIndex);
+    });
+
+    // Обработка выбора назначения платежа
+    bot.action(/^select_income_payment_purpose_(\d+)$/, (ctx) => {
+      const purposeIndex = parseInt(ctx.match[1]);
+      this.selectPaymentPurpose(ctx, purposeIndex);
     });
 
     // Обработка кнопок подтверждения
