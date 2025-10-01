@@ -23,6 +23,13 @@ class SearchOrdersHandler {
         return;
       }
 
+      // Проверяем, что это не кнопки меню
+      const menuButtons = ['💰 Касса', '📊 Отчеты', '👥 Сотрудники', '📋 Заявки', '➕ Приход', '➖ Расход', '📊 История', '💰 Баланс'];
+      if (menuButtons.includes(text.trim())) {
+        console.log(`🔍 Пропускаем кнопку меню: "${text.trim()}"`);
+        return;
+      }
+
       // Получаем города директора
       const directorInfo = await db.getDirectorInfo(ctx.from.id.toString());
       if (!directorInfo || !directorInfo.cities || directorInfo.cities.length === 0) {
