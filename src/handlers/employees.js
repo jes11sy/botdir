@@ -29,9 +29,12 @@ class EmployeesHandler {
     }
   }
 
-  // Получение списка мастеров в виде кнопок
-  async getMasters(ctx) {
+  // Получение списка мастеров в виде кнопок с пагинацией
+  async getMasters(ctx, page = 1) {
     try {
+      const itemsPerPage = 10;
+      const offset = (page - 1) * itemsPerPage;
+
       // Получаем города директора
       const directorInfo = await db.getDirectorInfo(ctx.from.id.toString());
       
@@ -45,32 +48,57 @@ class EmployeesHandler {
         return;
       }
 
-      // Получаем только работающих мастеров из городов директора
-      const masters = await db.getClient().query(`
-        SELECT * FROM master 
+      // Получаем общее количество работающих мастеров
+      const countResult = await db.getClient().query(`
+        SELECT COUNT(*) as total FROM master 
         WHERE status_work = 'работает'
         AND cities && $1
-        ORDER BY name ASC
-        LIMIT 50
       `, [directorInfo.cities]);
       
-      if (masters.rows.length === 0) {
+      const totalMasters = parseInt(countResult.rows[0].total);
+      const totalPages = Math.ceil(totalMasters / itemsPerPage);
+
+      if (totalMasters === 0) {
         ctx.reply('Работающих мастеров в ваших городах не найдено');
         return;
       }
 
+      // Получаем мастеров для текущей страницы
+      const masters = await db.getClient().query(`
+        SELECT * FROM master 
+        WHERE status_work = 'работает'
+        AND cities && $1
+        ORDER BY name ASC, id ASC
+        LIMIT $2 OFFSET $3
+      `, [directorInfo.cities, itemsPerPage, offset]);
+
       // Создаем inline кнопки для каждого мастера
       const buttons = masters.rows.map(master => {
         const cities = Array.isArray(master.cities) ? master.cities.join(', ') : master.cities;
-        return Markup.button.callback(
+        return [Markup.button.callback(
           `👨‍🔧 ${master.name} (${cities})`,
           `master_${master.id}`
-        );
+        )];
       });
 
-      const mastersKeyboard = Markup.inlineKeyboard(buttons, { columns: 1 });
+      // Добавляем кнопки навигации
+      const navigationButtons = [];
+      if (page > 1) {
+        navigationButtons.push(Markup.button.callback('⬅️ Назад', `masters_page_${page - 1}`));
+      }
+      if (page < totalPages) {
+        navigationButtons.push(Markup.button.callback('Вперёд ➡️', `masters_page_${page + 1}`));
+      }
+      
+      if (navigationButtons.length > 0) {
+        buttons.push(navigationButtons);
+      }
 
-      ctx.reply('👨‍🔧 *Список работающих мастеров в ваших городах:*', {
+      const mastersKeyboard = Markup.inlineKeyboard(buttons);
+
+      const message = `👨‍🔧 *Список работающих мастеров в ваших городах:*\n\n📄 Страница ${page} из ${totalPages} (Всего: ${totalMasters})`;
+
+      ctx.reply(message, {
         parse_mode: 'Markdown',
         ...mastersKeyboard
       });
@@ -191,8 +219,7 @@ class EmployeesHandler {
         SELECT * FROM master 
         WHERE LOWER(name) LIKE LOWER($1)
         AND cities && $2
-        ORDER BY name ASC
-        LIMIT 50
+        ORDER BY name ASC, id ASC
       `, [`%${searchName}%`, directorInfo.cities]);
       
       if (masters.rows.length === 0) {
@@ -212,21 +239,47 @@ class EmployeesHandler {
     }
   }
 
-  // Показать результаты поиска
-  async showSearchResults(ctx, masters, searchName) {
-    let message = `🔍 *Результаты поиска: "${searchName}"*\n\n`;
+  // Показать результаты поиска с пагинацией
+  async showSearchResults(ctx, masters, searchName, page = 1) {
+    const itemsPerPage = 10;
+    const totalMasters = masters.length;
+    const totalPages = Math.ceil(totalMasters / itemsPerPage);
+    const offset = (page - 1) * itemsPerPage;
+    const mastersPage = masters.slice(offset, offset + itemsPerPage);
     
-    // Создаем inline кнопки для каждого найденного мастера
-    const buttons = masters.map(master => {
+    // Сохраняем результаты поиска в сессии для пагинации
+    ctx.session = ctx.session || {};
+    ctx.session.searchResults = {
+      masters: masters,
+      searchName: searchName
+    };
+    
+    let message = `🔍 *Результаты поиска: "${searchName}"*\n\n📄 Страница ${page} из ${totalPages} (Найдено: ${totalMasters})`;
+    
+    // Создаем inline кнопки для каждого найденного мастера на текущей странице
+    const buttons = mastersPage.map(master => {
       const cities = Array.isArray(master.cities) ? master.cities.join(', ') : master.cities;
       const statusEmoji = master.status_work === 'работает' ? '✅' : '❌';
-      return Markup.button.callback(
+      return [Markup.button.callback(
         `${statusEmoji} ${master.name} (${cities})`,
         `master_${master.id}`
-      );
+      )];
     });
 
-    const searchKeyboard = Markup.inlineKeyboard(buttons, { columns: 1 });
+    // Добавляем кнопки навигации
+    const navigationButtons = [];
+    if (page > 1) {
+      navigationButtons.push(Markup.button.callback('⬅️ Назад', `search_page_${page - 1}`));
+    }
+    if (page < totalPages) {
+      navigationButtons.push(Markup.button.callback('Вперёд ➡️', `search_page_${page + 1}`));
+    }
+    
+    if (navigationButtons.length > 0) {
+      buttons.push(navigationButtons);
+    }
+
+    const searchKeyboard = Markup.inlineKeyboard(buttons);
 
     ctx.reply(message, {
       parse_mode: 'Markdown',
@@ -534,14 +587,30 @@ class EmployeesHandler {
       ctx.reply('Раздел "Сотрудники"', employeesMenu);
     });
 
-    bot.hears('📋 Список мастеров', (ctx) => this.getMasters(ctx));
-    bot.hears('🔍 Поиск мастера', (ctx) => this.searchMaster(ctx));
-    bot.hears('➕ Добавить мастера', (ctx) => this.addMaster(ctx));
+    bot.hears('📋 Список мастеров', AuthMiddleware.requireDirector, (ctx) => this.getMasters(ctx));
+    bot.hears('🔍 Поиск мастера', AuthMiddleware.requireDirector, (ctx) => this.searchMaster(ctx));
+    bot.hears('➕ Добавить мастера', AuthMiddleware.requireDirector, (ctx) => this.addMaster(ctx));
 
     // Обработка нажатия на мастера
     bot.action(/^master_(\d+)$/, (ctx) => {
       const masterId = ctx.match[1];
       this.showMasterDetails(ctx, masterId);
+    });
+
+    // Обработка пагинации для списка мастеров
+    bot.action(/^masters_page_(\d+)$/, (ctx) => {
+      const page = parseInt(ctx.match[1]);
+      this.getMasters(ctx, page);
+    });
+
+    // Обработка пагинации для результатов поиска
+    bot.action(/^search_page_(\d+)$/, (ctx) => {
+      const page = parseInt(ctx.match[1]);
+      if (ctx.session && ctx.session.searchResults) {
+        this.showSearchResults(ctx, ctx.session.searchResults.masters, ctx.session.searchResults.searchName, page);
+      } else {
+        ctx.reply('❌ Результаты поиска устарели. Выполните поиск заново.');
+      }
     });
 
     // Обработка изменения статуса мастера
