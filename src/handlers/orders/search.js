@@ -159,14 +159,9 @@ class SearchOrdersHandler {
 
     // Обработка текстовых сообщений для поиска заявок
     bot.on('text', async (ctx, next) => {
-      if (ctx.session && ctx.session.searchOrderStep) {
-        switch (ctx.session.searchOrderStep) {
-          case 'query':
-            await this.processOrderSearch(ctx, ctx.message.text);
-            break;
-          default:
-            next();
-        }
+      // ВАЖНО: Проверяем только если активен режим поиска заявок
+      if (ctx.session && ctx.session.searchOrderStep === 'query') {
+        await this.processOrderSearch(ctx, ctx.message.text);
       } else {
         next();
       }
