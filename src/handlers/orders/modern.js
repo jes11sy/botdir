@@ -23,13 +23,21 @@ class ModernOrdersHandler {
         WHERE status_order = 'Модерн' 
         AND city = ANY($1)
         ORDER BY date_meeting ASC 
-        LIMIT 10
+        LIMIT 50
       `;
       
       const result = await db.getClient().query(query, [directorCities]);
       const orders = result.rows;
+      
+      console.log('🔍 Найдено модернов для директора:', orders.length);
+      console.log('🔍 Модерны директора:', orders.map(o => ({ id: o.id, master_id: o.master_id, city: o.city, date: o.date_meeting })));
 
       if (orders.length === 0) {
+        // Дополнительная проверка - показываем все модерны без фильтра по городам
+        const allModernsQuery = `SELECT id, master_id, city, status_order FROM orders WHERE status_order = 'Модерн' LIMIT 10`;
+        const allModernsResult = await db.getClient().query(allModernsQuery);
+        console.log('🔍 Все модерны в системе:', allModernsResult.rows);
+        
         ctx.reply('Заявок со статусом "Модерн" в ваших городах не найдено');
         return;
       }

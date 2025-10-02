@@ -274,8 +274,22 @@ class MasterHandler {
       
       const result = await db.getClient().query(query, [masterCities, masterId]);
       const orders = result.rows;
+      
+      console.log('🔍 Найдено модернов для мастера:', orders.length);
+      console.log('🔍 Модерны мастера:', orders);
 
       if (orders.length === 0) {
+        // Дополнительная проверка - показываем все модерны без фильтра по мастеру
+        const allModernsQuery = `
+          SELECT id, master_id, city, status_order FROM orders 
+          WHERE status_order = 'Модерн' 
+          AND city = ANY($1)
+          ORDER BY date_meeting ASC 
+          LIMIT 10
+        `;
+        const allModernsResult = await db.getClient().query(allModernsQuery, [masterCities]);
+        console.log('🔍 Все модерны в городах мастера (без фильтра по master_id):', allModernsResult.rows);
+        
         ctx.reply('Ваших модернизаций не найдено');
         return;
       }
