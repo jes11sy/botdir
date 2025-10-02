@@ -51,7 +51,7 @@ class EmployeesHandler {
         WHERE status_work = 'работает'
         AND cities && $1
         ORDER BY name ASC
-        LIMIT 20
+        LIMIT 50
       `, [directorInfo.cities]);
       
       if (masters.rows.length === 0) {
