@@ -22,7 +22,7 @@ class NewOrdersHandler {
         WHERE status_order = 'Ожидает' 
         AND city = ANY($1)
         ORDER BY date_meeting ASC 
-        LIMIT 10
+        LIMIT 50
       `;
       
       const result = await db.getClient().query(query, [directorCities]);

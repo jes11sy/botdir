@@ -192,7 +192,7 @@ class EmployeesHandler {
         WHERE LOWER(name) LIKE LOWER($1)
         AND cities && $2
         ORDER BY name ASC
-        LIMIT 10
+        LIMIT 50
       `, [`%${searchName}%`, directorInfo.cities]);
       
       if (masters.rows.length === 0) {

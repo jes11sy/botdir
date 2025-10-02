@@ -22,7 +22,7 @@ class InWorkOrdersHandler {
         WHERE status_order IN ('Принял', 'В пути', 'В работе')
         AND city = ANY($1)
         ORDER BY date_meeting ASC 
-        LIMIT 10
+        LIMIT 50
       `;
       
       const result = await db.getClient().query(query, [directorCities]);

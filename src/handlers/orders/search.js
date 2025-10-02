@@ -46,7 +46,7 @@ class SearchOrdersHandler {
         WHERE (id = $1 OR phone LIKE $2 OR LOWER(client_name) LIKE LOWER($3))
         AND city = ANY($4)
         ORDER BY date_meeting ASC
-        LIMIT 10
+        LIMIT 50
       `;
       
       const result = await db.getClient().query(query, [searchText, `%${searchText}%`, `%${searchText}%`, directorCities]);
