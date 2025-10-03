@@ -407,7 +407,8 @@ class MasterHandler {
       const masterCities = parseCities(masterInfo.cities);
       const masterId = masterInfo.id;
 
-      const query = `
+      // Получаем статистику по заявкам
+      const ordersQuery = `
         SELECT 
           COUNT(*) as total_orders,
           COUNT(CASE WHEN status_order = 'Ожидает' THEN 1 END) as pending_orders,
@@ -418,17 +419,43 @@ class MasterHandler {
         AND master_id = $2
       `;
       
-      const result = await db.getClient().query(query, [masterCities, masterId]);
-      const report = result.rows[0];
+      const ordersResult = await db.getClient().query(ordersQuery, [masterCities, masterId]);
+      const ordersReport = ordersResult.rows[0];
 
-      let message = '📊 Отчет по заявкам мастера:\n\n';
-      message += `📋 Всего заявок: ${report.total_orders}\n`;
-      message += `⏳ Ожидают: ${report.pending_orders}\n`;
-      message += `⚙️ В работе: ${report.in_work_orders}\n`;
-      message += `✅ Завершено: ${report.completed_orders}\n\n`;
-      message += `🏙️ Города: ${masterCities.join(', ')}`;
+      // Получаем финансовую статистику (зарплата и средний чек)
+      const financialQuery = `
+        SELECT 
+          COUNT(CASE WHEN status_order = 'Готово' THEN 1 END) as completed_orders,
+          COALESCE(SUM(CASE WHEN status_order = 'Готово' THEN clean ELSE 0 END), 0) as total_clean,
+          COALESCE(SUM(CASE WHEN status_order = 'Готово' THEN master_change ELSE 0 END), 0) as total_master_change
+        FROM orders 
+        WHERE city = ANY($1)
+        AND master_id = $2
+      `;
+      
+      const financialResult = await db.getClient().query(financialQuery, [masterCities, masterId]);
+      const financialReport = financialResult.rows[0];
 
-      ctx.reply(message);
+      const completedOrders = parseInt(financialReport.completed_orders);
+      const totalClean = parseFloat(financialReport.total_clean);
+      const totalMasterChange = parseFloat(financialReport.total_master_change);
+      
+      // Средний чек = оборот / количество заказов со статусом Готово
+      const averageCheck = completedOrders > 0 ? (totalClean / completedOrders).toFixed(0) : '0';
+
+      let message = '📊 *Отчет по заявкам мастера:*\n\n';
+      message += `📋 *Всего заявок:* ${ordersReport.total_orders}\n`;
+      message += `⏳ *Ожидают:* ${ordersReport.pending_orders}\n`;
+      message += `⚙️ *В работе:* ${ordersReport.in_work_orders}\n`;
+      message += `✅ *Завершено:* ${ordersReport.completed_orders}\n\n`;
+      
+      message += `💰 *Финансовая статистика:*\n`;
+      message += `💵 *Средний чек:* ${averageCheck} ₽\n`;
+      message += `👨‍🔧 *Зарплата:* ${totalMasterChange.toFixed(2)} ₽\n\n`;
+      
+      message += `🏙️ *Города:* ${masterCities.join(', ')}`;
+
+      ctx.reply(message, { parse_mode: 'Markdown' });
     } catch (error) {
       console.error('Ошибка при получении отчета по заявкам мастера:', error);
       ctx.reply('Ошибка при получении отчета');
