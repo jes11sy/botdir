@@ -6,6 +6,12 @@ class NavigationHandler {
   setupHandlers(bot) {
     // Команда /start
     bot.start((ctx) => {
+      // Проверяем, что это личное сообщение (не группа/канал)
+      if (ctx.chat.type !== 'private') {
+        ctx.reply('❌ Бот работает только в личных сообщениях. Напишите боту в личку.');
+        return;
+      }
+
       // Проверяем роль пользователя и показываем соответствующее меню
       if (ctx.session.userRole === 'director') {
         ctx.reply('Добро пожаловать, директор! Выберите раздел:', mainMenu);
@@ -58,6 +64,12 @@ class NavigationHandler {
 
     // Кнопка "Назад" для всех разделов
     bot.hears('⬅️ Назад', (ctx) => {
+      // Проверяем, что это личное сообщение (не группа/канал)
+      if (ctx.chat.type !== 'private') {
+        ctx.reply('❌ Бот работает только в личных сообщениях. Напишите боту в личку.');
+        return;
+      }
+
       if (ctx.session.userRole === 'director') {
         ctx.reply('Главное меню:', mainMenu);
       } else if (ctx.session.userRole === 'master') {

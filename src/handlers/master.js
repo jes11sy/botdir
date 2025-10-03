@@ -1,4 +1,4 @@
-const { masterMenu, masterOrdersMenu, masterCashMenu, masterReportsMenu } = require('../keyboards/menus');
+const { masterMenu, masterOrdersMenu, masterReportsMenu } = require('../keyboards/menus');
 const AuthMiddleware = require('../middleware/auth');
 const db = require('../config/database');
 const { parseCities, hasCities } = require('../utils/cities');
@@ -10,9 +10,6 @@ class MasterHandler {
       ctx.reply('Заявки мастера:', masterOrdersMenu);
     });
 
-    bot.hears('💰 Сдача денег', AuthMiddleware.requireMaster, (ctx) => {
-      ctx.reply('Сдача денег мастера:', masterCashMenu);
-    });
 
     bot.hears('📊 Моя статистика', AuthMiddleware.requireMaster, (ctx) => {
       ctx.reply('Статистика мастера:', masterReportsMenu);
@@ -35,31 +32,12 @@ class MasterHandler {
     });
 
 
-    // Обработчики кассы мастера
-    bot.hears('💰 Баланс', AuthMiddleware.requireMaster, async (ctx) => {
-      await this.getMasterCashBalance(ctx);
-    });
-
-    bot.hears('📊 История', AuthMiddleware.requireMaster, async (ctx) => {
-      await this.getMasterCashHistory(ctx);
-    });
-
-    bot.hears('➖ Расход', AuthMiddleware.requireMaster, async (ctx) => {
-      await this.addMasterExpense(ctx);
-    });
-
-    bot.hears('➕ Приход', AuthMiddleware.requireMaster, async (ctx) => {
-      await this.addMasterIncome(ctx);
-    });
 
     // Обработчики отчетов мастера
     bot.hears('📊 Мои заявки', AuthMiddleware.requireMaster, async (ctx) => {
       await this.getMasterOrdersReport(ctx);
     });
 
-    bot.hears('💰 Мои доходы', AuthMiddleware.requireMaster, async (ctx) => {
-      await this.getMasterIncomeReport(ctx);
-    });
 
     // Обработчики inline кнопок заявок мастера
     bot.action(/^master_order_(\d+)$/, async (ctx) => {
@@ -415,102 +393,6 @@ class MasterHandler {
     }
   }
 
-  // Получение баланса кассы мастера
-  async getMasterCashBalance(ctx) {
-    try {
-      const masterInfo = ctx.session.userInfo;
-      
-      if (!masterInfo || !hasCities(masterInfo.cities)) {
-        ctx.reply('❌ У вас не указаны города в профиле. Обратитесь к администратору.');
-        return;
-      }
-
-      const masterCities = parseCities(masterInfo.cities);
-
-      let totalIncome = 0;
-      let totalExpense = 0;
-
-      for (const city of masterCities) {
-        const balance = await db.getCashBalanceByCity(city);
-        totalIncome += parseFloat(balance.income) || 0;
-        totalExpense += parseFloat(balance.expense) || 0;
-      }
-
-      const balance = totalIncome - totalExpense;
-
-      let message = '💰 Баланс кассы мастера:\n\n';
-      message += `💵 Доходы: ${totalIncome.toFixed(2)} ₽\n`;
-      message += `💸 Расходы: ${totalExpense.toFixed(2)} ₽\n`;
-      message += `💰 Баланс: ${balance.toFixed(2)} ₽\n\n`;
-      message += `🏙️ Города: ${masterCities.join(', ')}`;
-
-      ctx.reply(message);
-    } catch (error) {
-      console.error('Ошибка при получении баланса кассы мастера:', error);
-      ctx.reply('Ошибка при получении баланса');
-    }
-  }
-
-  // Получение истории кассы мастера
-  async getMasterCashHistory(ctx) {
-    try {
-      const masterInfo = ctx.session.userInfo;
-      
-      if (!masterInfo || !hasCities(masterInfo.cities)) {
-        ctx.reply('❌ У вас не указаны города в профиле. Обратитесь к администратору.');
-        return;
-      }
-
-      const masterCities = parseCities(masterInfo.cities);
-
-      const query = `
-        SELECT * FROM cash 
-        WHERE city = ANY($1)
-        ORDER BY date_create DESC 
-        LIMIT 10
-      `;
-      
-      const result = await db.getClient().query(query, [masterCities]);
-      const history = result.rows;
-
-      if (history.length === 0) {
-        ctx.reply('История операций в ваших городах не найдена');
-        return;
-      }
-
-      let message = '📊 История операций кассы:\n\n';
-      history.forEach(record => {
-        const date = new Date(record.date_create);
-        const dateStr = date.toLocaleDateString('ru-RU');
-        const timeStr = date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-        const type = record.name === 'приход' ? '➕' : '➖';
-        message += `${type} ${record.amount} ₽\n`;
-        message += `📅 ${dateStr} ${timeStr}\n`;
-        message += `🏙️ ${record.city}\n`;
-        if (record.note) {
-          message += `📝 ${record.note}\n`;
-        }
-        message += `👤 ${record.name_create}\n\n`;
-      });
-
-      ctx.reply(message);
-    } catch (error) {
-      console.error('Ошибка при получении истории кассы мастера:', error);
-      ctx.reply('Ошибка при получении истории');
-    }
-  }
-
-  // Добавление расхода мастера
-  async addMasterExpense(ctx) {
-    ctx.reply('💸 Введите сумму расхода:');
-    ctx.session.addingExpense = true;
-  }
-
-  // Добавление прихода мастера
-  async addMasterIncome(ctx) {
-    ctx.reply('💰 Введите сумму прихода:');
-    ctx.session.addingIncome = true;
-  }
 
   // Отчет по заявкам мастера
   async getMasterOrdersReport(ctx) {
@@ -553,41 +435,8 @@ class MasterHandler {
     }
   }
 
-  // Отчет по доходам мастера
-  async getMasterIncomeReport(ctx) {
-    try {
-      const masterInfo = ctx.session.userInfo;
-      
-      if (!masterInfo || !hasCities(masterInfo.cities)) {
-        ctx.reply('❌ У вас не указаны города в профиле. Обратитесь к администратору.');
-        return;
-      }
-
-      const masterCities = parseCities(masterInfo.cities);
-
-      let totalIncome = 0;
-      let totalExpense = 0;
-
-      for (const city of masterCities) {
-        const balance = await db.getCashBalanceByCity(city);
-        totalIncome += parseFloat(balance.income) || 0;
-        totalExpense += parseFloat(balance.expense) || 0;
-      }
-
-      const netIncome = totalIncome - totalExpense;
-
-      let message = '💰 Отчет по доходам мастера:\n\n';
-      message += `💵 Общие доходы: ${totalIncome.toFixed(2)} ₽\n`;
-      message += `💸 Общие расходы: ${totalExpense.toFixed(2)} ₽\n`;
-      message += `💰 Чистый доход: ${netIncome.toFixed(2)} ₽\n\n`;
-      message += `🏙️ Города: ${masterCities.join(', ')}`;
-
-      ctx.reply(message);
-    } catch (error) {
-      console.error('Ошибка при получении отчета по доходам мастера:', error);
-      ctx.reply('Ошибка при получении отчета');
-    }
-  }
 }
 
 module.exports = new MasterHandler();
+
+

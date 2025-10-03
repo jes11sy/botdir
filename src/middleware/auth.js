@@ -4,6 +4,13 @@ class AuthMiddleware {
   // Middleware для авторизации пользователя
   static async checkAuth(ctx, next) {
     try {
+      // Проверяем, что это личное сообщение (не группа/канал)
+      if (ctx.chat.type !== 'private') {
+        console.log(`❌ Попытка использования бота в групповом чате: ${ctx.chat.type}`);
+        ctx.session.userRole = 'unauthorized';
+        return next();
+      }
+
       const userId = ctx.from.id.toString();
       
       // Проверяем сначала директора
@@ -39,6 +46,9 @@ class AuthMiddleware {
 
   // Middleware для проверки роли директора
   static requireDirector(ctx, next) {
+    if (ctx.chat.type !== 'private') {
+      return ctx.reply('❌ Бот работает только в личных сообщениях');
+    }
     if (ctx.session.userRole === 'director') {
       return next();
     }
@@ -47,6 +57,9 @@ class AuthMiddleware {
 
   // Middleware для проверки роли мастера
   static requireMaster(ctx, next) {
+    if (ctx.chat.type !== 'private') {
+      return ctx.reply('❌ Бот работает только в личных сообщениях');
+    }
     if (ctx.session.userRole === 'master') {
       return next();
     }
@@ -55,6 +68,9 @@ class AuthMiddleware {
 
   // Middleware для проверки авторизованных пользователей (директор или мастер)
   static requireAuth(ctx, next) {
+    if (ctx.chat.type !== 'private') {
+      return ctx.reply('❌ Бот работает только в личных сообщениях');
+    }
     if (ctx.session.userRole === 'director' || ctx.session.userRole === 'master') {
       return next();
     }
