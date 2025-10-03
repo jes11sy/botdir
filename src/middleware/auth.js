@@ -7,8 +7,7 @@ class AuthMiddleware {
       // Проверяем, что это личное сообщение (не группа/канал)
       if (ctx.chat.type !== 'private') {
         console.log(`❌ Попытка использования бота в групповом чате: ${ctx.chat.type}`);
-        ctx.session.userRole = 'unauthorized';
-        return next();
+        return; // Не устанавливаем userRole и не вызываем next()
       }
 
       const userId = ctx.from.id.toString();
@@ -74,7 +73,7 @@ class AuthMiddleware {
     if (ctx.session.userRole === 'director' || ctx.session.userRole === 'master') {
       return next();
     }
-    return ctx.reply('❌ Доступ закрыт');
+    return;
   }
 }
 

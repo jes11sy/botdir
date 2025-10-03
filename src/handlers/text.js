@@ -8,7 +8,6 @@ class TextHandler {
   async handleText(ctx) {
     // Проверяем авторизацию
     if (ctx.session.userRole === 'unauthorized') {
-      ctx.reply('❌ Доступ закрыт');
       return;
     }
 

@@ -17,7 +17,7 @@ class NavigationHandler {
       } else if (ctx.session.userRole === 'master') {
         ctx.reply('Добро пожаловать, мастер! Выберите раздел:', masterMenu);
       } else {
-        ctx.reply('❌ Доступ закрыт');
+        return;
       }
     });
 
@@ -73,7 +73,7 @@ class NavigationHandler {
       } else if (ctx.session.userRole === 'master') {
         ctx.reply('Главное меню:', masterMenu);
       } else {
-        ctx.reply('❌ Доступ закрыт');
+        return;
       }
     });
   }
