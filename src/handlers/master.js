@@ -34,6 +34,7 @@ class MasterHandler {
       await this.getMasterModernOrders(ctx);
     });
 
+
     // Обработчики кассы мастера
     bot.hears('💰 Баланс', AuthMiddleware.requireMaster, async (ctx) => {
       await this.getMasterCashBalance(ctx);
@@ -78,6 +79,23 @@ class MasterHandler {
       console.log(`🔍 Обработчик master_modern_order сработал: orderId = ${orderId}`);
       await this.showMasterOrderDetails(ctx, orderId);
     });
+
+    // Обработчик поиска заявок мастера
+    bot.action(/^master_search_order_(\d+)$/, async (ctx) => {
+      const orderId = ctx.match[1];
+      console.log(`🔍 Обработчик master_search_order сработал: orderId = ${orderId}`);
+      await this.showMasterOrderDetails(ctx, orderId);
+    });
+
+    // Обработка текстовых сообщений для поиска заявок мастера
+    bot.on('text', async (ctx, next) => {
+      // ВАЖНО: Проверяем только если активен режим поиска заявок мастера
+      if (ctx.session && ctx.session.searchingMasterOrders) {
+        await this.processMasterOrderSearch(ctx, ctx.message.text);
+      } else {
+        next();
+      }
+    });
   }
 
   // Получение новых заявок мастера
@@ -95,17 +113,20 @@ class MasterHandler {
       }
 
       const masterCities = parseCities(masterInfo.cities);
+      const masterId = masterInfo.id;
       console.log('🔍 Обработанные города мастера:', masterCities);
+      console.log('🔍 ID мастера:', masterId);
 
       const query = `
         SELECT * FROM orders 
         WHERE status_order = 'Ожидает' 
         AND city = ANY($1)
+        AND master_id = $2
         ORDER BY date_meeting ASC 
         LIMIT 50
       `;
       
-      const result = await db.getClient().query(query, [masterCities]);
+      const result = await db.getClient().query(query, [masterCities, masterId]);
       const orders = result.rows;
 
       if (orders.length === 0) {
@@ -145,16 +166,18 @@ class MasterHandler {
       }
 
       const masterCities = parseCities(masterInfo.cities);
+      const masterId = masterInfo.id;
 
       const query = `
         SELECT * FROM orders 
         WHERE status_order IN ('Принял', 'В пути', 'В работе') 
         AND city = ANY($1)
+        AND master_id = $2
         ORDER BY date_meeting ASC 
         LIMIT 50
       `;
       
-      const result = await db.getClient().query(query, [masterCities]);
+      const result = await db.getClient().query(query, [masterCities, masterId]);
       const orders = result.rows;
 
       if (orders.length === 0) {
@@ -186,7 +209,81 @@ class MasterHandler {
   // Поиск заявок мастера
   async searchMasterOrders(ctx) {
     ctx.reply('🔍 Введите номер заказа или имя клиента для поиска:');
-    ctx.session.searchingOrders = true;
+    ctx.session.searchingMasterOrders = true;
+  }
+
+  // Обработка поиска заявок мастера
+  async processMasterOrderSearch(ctx, text) {
+    try {
+      if (!text || text.trim().length === 0) {
+        ctx.reply('❌ Поисковый запрос не может быть пустым. Введите данные для поиска:');
+        return;
+      }
+
+      // Проверяем, что это не кнопки меню
+      const menuButtons = ['💰 Касса', '📊 Отчеты', '👥 Сотрудники', '📋 Заявки', '➕ Приход', '➖ Расход', '📊 История', '💰 Баланс'];
+      if (menuButtons.includes(text.trim())) {
+        console.log(`🔍 Пропускаем кнопку меню: "${text.trim()}"`);
+        return;
+      }
+
+      const masterInfo = ctx.session.userInfo;
+      if (!masterInfo) {
+        ctx.reply('❌ Ошибка авторизации');
+        return;
+      }
+
+      const masterId = masterInfo.id;
+      const searchText = text.trim();
+      
+      // Ищем заявки только мастера
+      const orders = await db.searchMasterOrder(searchText, masterId);
+      
+      if (orders.length === 0) {
+        ctx.reply(`❌ Заявки по запросу "${searchText}" не найдены или не принадлежат вам`);
+        return;
+      }
+
+      // Показываем результаты поиска
+      await this.showMasterSearchResults(ctx, orders, searchText);
+      
+      // Очищаем сессию
+      delete ctx.session.searchingMasterOrders;
+    } catch (error) {
+      console.error('Ошибка при поиске заявок мастера:', error);
+      ctx.reply('Ошибка при поиске заявок');
+    }
+  }
+
+  // Показать результаты поиска мастера
+  async showMasterSearchResults(ctx, orders, searchText) {
+    // Если найдена только одна заявка, показываем полную информацию
+    if (orders.length === 1) {
+      await this.showMasterOrderDetails(ctx, orders[0].id);
+      return;
+    }
+
+    let message = `🔍 *Результаты поиска: "${searchText}"*\n\n`;
+    
+    // Создаем inline кнопки для каждой найденной заявки
+    const { Markup } = require('telegraf');
+    const buttons = orders.map(order => {
+      const date = new Date(order.date_meeting);
+      const dateStr = date.toLocaleDateString('ru-RU');
+      const timeStr = date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+      
+      return Markup.button.callback(
+        `📋 ${order.id} | ${dateStr} ${timeStr}`,
+        `master_search_order_${order.id}`
+      );
+    });
+
+    const searchKeyboard = Markup.inlineKeyboard(buttons, { columns: 1 });
+
+    ctx.reply(message, {
+      parse_mode: 'Markdown',
+      ...searchKeyboard
+    });
   }
 
   // Показать детали заявки мастера
@@ -194,12 +291,15 @@ class MasterHandler {
     try {
       console.log(`🔍 showMasterOrderDetails вызван для заявки #${orderId}`);
       
-      // Получаем детали заявки
-      const orders = await db.searchOrder(orderId);
-      console.log(`🔍 Результат поиска заявки #${orderId}:`, orders);
+      const masterInfo = ctx.session.userInfo;
+      const masterId = masterInfo.id;
+      
+      // Получаем детали заявки (только если она принадлежит мастеру)
+      const orders = await db.searchMasterOrder(orderId, masterId);
+      console.log(`🔍 Результат поиска заявки #${orderId} для мастера ${masterId}:`, orders);
       
       if (orders.length === 0) {
-        ctx.reply('Заявка не найдена');
+        ctx.reply('Заявка не найдена или не принадлежит вам');
         return;
       }
 
@@ -423,6 +523,7 @@ class MasterHandler {
       }
 
       const masterCities = parseCities(masterInfo.cities);
+      const masterId = masterInfo.id;
 
       const query = `
         SELECT 
@@ -432,9 +533,10 @@ class MasterHandler {
           COUNT(CASE WHEN status_order = 'Завершено' THEN 1 END) as completed_orders
         FROM orders 
         WHERE city = ANY($1)
+        AND master_id = $2
       `;
       
-      const result = await db.getClient().query(query, [masterCities]);
+      const result = await db.getClient().query(query, [masterCities, masterId]);
       const report = result.rows[0];
 
       let message = '📊 Отчет по заявкам мастера:\n\n';

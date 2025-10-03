@@ -122,6 +122,35 @@ class Database {
     return result.rows;
   }
 
+  // Поиск заявок для мастера (только его заявки)
+  async searchMasterOrder(searchText, masterId) {
+    let query, params;
+    
+    if (searchText.match(/^\d+$/)) {
+      query = `
+        SELECT o.*, op.name as operator_name, m.name as master_name
+        FROM orders o
+        LEFT JOIN callcentre_operator op ON o.operator_name_id = op.id
+        LEFT JOIN master m ON o.master_id = m.id
+        WHERE o.id = $1 AND o.master_id = $2
+      `;
+      params = [parseInt(searchText), masterId];
+    } else {
+      query = `
+        SELECT o.*, op.name as operator_name, m.name as master_name
+        FROM orders o
+        LEFT JOIN callcentre_operator op ON o.operator_name_id = op.id
+        LEFT JOIN master m ON o.master_id = m.id
+        WHERE o.phone ILIKE $1 AND o.master_id = $2
+        LIMIT 5
+      `;
+      params = [`%${searchText}%`, masterId];
+    }
+    
+    const result = await this.pool.query(query, params);
+    return result.rows;
+  }
+
   // Методы для работы с кассой
   async getCashBalance() {
     const incomeQuery = `
