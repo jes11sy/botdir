@@ -47,7 +47,7 @@ class AuthMiddleware {
   // Middleware для проверки роли директора
   static requireDirector(ctx, next) {
     if (ctx.chat.type !== 'private') {
-      return ctx.reply('❌ Бот работает только в личных сообщениях');
+      return; // Не отвечаем в групповых чатах
     }
     if (ctx.session.userRole === 'director') {
       return next();
@@ -58,7 +58,7 @@ class AuthMiddleware {
   // Middleware для проверки роли мастера
   static requireMaster(ctx, next) {
     if (ctx.chat.type !== 'private') {
-      return ctx.reply('❌ Бот работает только в личных сообщениях');
+      return; // Не отвечаем в групповых чатах
     }
     if (ctx.session.userRole === 'master') {
       return next();
@@ -69,7 +69,7 @@ class AuthMiddleware {
   // Middleware для проверки авторизованных пользователей (директор или мастер)
   static requireAuth(ctx, next) {
     if (ctx.chat.type !== 'private') {
-      return ctx.reply('❌ Бот работает только в личных сообщениях');
+      return; // Не отвечаем в групповых чатах
     }
     if (ctx.session.userRole === 'director' || ctx.session.userRole === 'master') {
       return next();
