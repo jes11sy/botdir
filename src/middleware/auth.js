@@ -10,6 +10,20 @@ class AuthMiddleware {
         return next(); // Пропускаем авторизацию для команды /id
       }
       
+      // Разрешаем callback кнопки заявок в группах без авторизации
+      if (ctx.chat.type !== 'private' && ctx.callbackQuery) {
+        const callbackData = ctx.callbackQuery.data;
+        // Проверяем, что это callback кнопка заявки (accept_order, reject_order, final_status)
+        if (callbackData && (
+          callbackData.startsWith('accept_order_') ||
+          callbackData.startsWith('reject_order_') ||
+          callbackData.startsWith('final_status_')
+        )) {
+          console.log(`ℹ️ Callback кнопка заявки в групповом чате: ${callbackData}`);
+          return next(); // Пропускаем авторизацию для callback кнопок заявок
+        }
+      }
+      
       // Проверяем, что это личное сообщение (не группа/канал)
       if (ctx.chat.type !== 'private') {
         console.log(`❌ Попытка использования бота в групповом чате: ${ctx.chat.type}`);
