@@ -13,11 +13,17 @@ class AuthMiddleware {
       // Разрешаем callback кнопки заявок в группах без авторизации
       if (ctx.chat.type !== 'private' && ctx.callbackQuery) {
         const callbackData = ctx.callbackQuery.data;
-        // Проверяем, что это callback кнопка заявки (accept_order, reject_order, final_status)
+        // Проверяем, что это callback кнопка заявки
         if (callbackData && (
-          callbackData.startsWith('accept_order_') ||
-          callbackData.startsWith('reject_order_') ||
-          callbackData.startsWith('final_status_')
+          callbackData.startsWith('accept_order_') ||      // Принять заявку
+          callbackData.startsWith('reject_order_') ||      // Отклонить заявку
+          callbackData.startsWith('final_status_') ||      // Готово, Отказ, Незаказ
+          callbackData.startsWith('status_') ||            // В пути, В работе, Модерн
+          callbackData.startsWith('set_status_') ||        // Установить статус
+          callbackData.startsWith('master_order_') ||      // Кнопки заявок мастера
+          callbackData.startsWith('master_inwork_order_') ||
+          callbackData.startsWith('master_modern_order_') ||
+          callbackData.startsWith('master_search_order_')
         )) {
           console.log(`ℹ️ Callback кнопка заявки в групповом чате: ${callbackData}`);
           return next(); // Пропускаем авторизацию для callback кнопок заявок
