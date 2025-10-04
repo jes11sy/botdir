@@ -15,11 +15,32 @@ class AuthMiddleware {
         const callbackData = ctx.callbackQuery.data;
         // Проверяем, что это callback кнопка заявки
         if (callbackData && (
+          // Основные кнопки заявок
           callbackData.startsWith('accept_order_') ||      // Принять заявку
           callbackData.startsWith('reject_order_') ||      // Отклонить заявку
-          callbackData.startsWith('final_status_') ||      // Готово, Отказ, Незаказ
-          callbackData.startsWith('status_') ||            // В пути, В работе, Модерн
+          callbackData.startsWith('final_status_') ||      // Готово, Отказ, Незаказ, Модерн
+          callbackData.startsWith('on_way_') ||            // В пути
+          callbackData.startsWith('in_work_') ||           // В работе
+          callbackData.startsWith('assign_master_') ||     // Назначить мастера
+          callbackData.startsWith('select_master_') ||     // Выбрать мастера
+          callbackData.startsWith('order_') ||             // Просмотр заявки
+          
+          // Статусы заявок
+          callbackData.startsWith('status_') ||            // Общие статусы
           callbackData.startsWith('set_status_') ||        // Установить статус
+          callbackData.startsWith('change_status_') ||     // Изменить статус
+          callbackData.startsWith('remind_master_') ||     // Напомнить мастеру
+          
+          // Заявки в работе
+          callbackData.startsWith('inwork_') ||            // Все кнопки заявок в работе
+          
+          // Модерн заявки
+          callbackData.startsWith('modern_') ||            // Все кнопки модерн заявок
+          
+          // Поиск заявок
+          callbackData.startsWith('search_') ||            // Поиск заявок
+          
+          // Кнопки заявок мастера
           callbackData.startsWith('master_order_') ||      // Кнопки заявок мастера
           callbackData.startsWith('master_inwork_order_') ||
           callbackData.startsWith('master_modern_order_') ||
