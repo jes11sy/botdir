@@ -4,6 +4,12 @@ class AuthMiddleware {
   // Middleware для авторизации пользователя
   static async checkAuth(ctx, next) {
     try {
+      // Разрешаем команду /id в группах без авторизации
+      if (ctx.chat.type !== 'private' && ctx.message?.text === '/id') {
+        console.log(`ℹ️ Команда /id в групповом чате: ${ctx.chat.type}`);
+        return next(); // Пропускаем авторизацию для команды /id
+      }
+      
       // Проверяем, что это личное сообщение (не группа/канал)
       if (ctx.chat.type !== 'private') {
         console.log(`❌ Попытка использования бота в групповом чате: ${ctx.chat.type}`);
