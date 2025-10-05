@@ -6,8 +6,8 @@ const mastersReportHandler = require('./reports/masters');
 class TextHandler {
   // Обработка текстовых сообщений
   async handleText(ctx) {
-    // Проверяем авторизацию
-    if (ctx.session.userRole === 'unauthorized') {
+    // Проверяем авторизацию только для личных сообщений
+    if (ctx.chat.type === 'private' && ctx.session.userRole === 'unauthorized') {
       return;
     }
 

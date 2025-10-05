@@ -583,6 +583,9 @@ class OrderDetailsHandler {
       ctx.session.waitingForAmounts = true;
       ctx.session.orderId = orderId;
       
+      // Сохраняем orderId в глобальном состоянии для групп
+      global.lastActiveOrder = orderId;
+      
       ctx.reply('💰 Укажите итог и расход через пробел (например: 10000 1000):\n\n📝 *В ответ на данное сообщение*');
     } catch (error) {
       console.error('Ошибка при запросе сумм:', error);
@@ -843,8 +846,31 @@ class OrderDetailsHandler {
 
     // Обработка ввода итога и расхода
     bot.on('text', async (ctx, next) => {
+      // Разрешаем обработку в группах для закрытия заказов
       if (ctx.session && ctx.session.waitingForAmounts) {
+        console.log(`💰 Обработка ввода итога и расхода в чате типа: ${ctx.chat.type}`);
         await this.processAmountsInput(ctx, ctx.message.text);
+      } else if (ctx.chat.type !== 'private') {
+        // Специальная обработка для групп - проверяем, является ли это ответом на запрос итога и расхода
+        const text = ctx.message.text.trim();
+        const isNumericInput = /^\d+\s+\d+$/.test(text) || /^\d+\.?\d*\s+\d+\.?\d*$/.test(text);
+        
+        if (isNumericInput) {
+          console.log(`💰 Обработка ввода итога и расхода в группе: ${text}`);
+          // Инициализируем сессию для группы
+          ctx.session = ctx.session || {};
+          ctx.session.waitingForAmounts = true;
+          // Пытаемся найти orderId из глобального состояния или из контекста
+          // Для групп мы можем использовать последний активный заказ
+          if (global.lastActiveOrder) {
+            ctx.session.orderId = global.lastActiveOrder;
+            await this.processAmountsInput(ctx, text);
+          } else {
+            ctx.reply('❌ Не удалось определить заказ для закрытия. Попробуйте еще раз.');
+          }
+        } else {
+          next();
+        }
       } else {
         next();
       }
