@@ -246,38 +246,48 @@ class OrderDetailsHandler {
   // Обработка принятия заявки мастером
   async handleMasterAcceptOrder(ctx, orderId) {
     try {
+      console.log(`🔍 handleMasterAcceptOrder вызван для заявки #${orderId}`);
+
       // Обновляем статус заявки на "Принял"
-      await db.getClient().query(`
+      const updateResult = await db.getClient().query(`
         UPDATE orders 
         SET status_order = 'Принял'
         WHERE id = $1
       `, [orderId]);
-
-      // Получаем информацию о заявке для отображения
-      const orders = await db.searchOrder(orderId);
-      const order = orders[0];
       
-      const meetingDate = new Date(order.date_meeting);
+      console.log(`🔍 Результат обновления: ${updateResult.rowCount} строк обновлено`);
+      
+      if (updateResult.rowCount === 0) {
+        console.log(`❌ Не удалось обновить заявку #${orderId}`);
+        ctx.reply('❌ Ошибка при обновлении статуса');
+        return;
+      }
+
+      // Получаем обновленную информацию о заявке для отображения
+      const updatedOrders = await db.searchOrder(orderId);
+      const updatedOrder = updatedOrders[0];
+      
+      const meetingDate = new Date(updatedOrder.date_meeting);
       const dateStr = meetingDate.toLocaleDateString('ru-RU');
       const timeStr = meetingDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 
         // Получаем информацию о мастере
         const masters = await db.getClient().query(`
           SELECT name FROM master WHERE id = $1
-        `, [order.master_id]);
+        `, [updatedOrder.master_id]);
         
         const masterName = masters.rows.length > 0 ? masters.rows[0].name : 'Не указано';
 
         let message = `📋 *№${orderId}* | Принял\n\n`;
-        message += `🏢 *РК:* ${order.rk}\n`;
-        message += `🏙️ *Город:* ${order.city}\n`;
-        message += `👨‍🔧 *Имя мастера:* ${order.avito_name || 'Не указано'}\n`;
-        message += `📝 *Тип заявки:* ${order.type_order}\n\n`;
-        message += `👤 *Имя клиента:* ${order.client_name}\n`;
-        message += `📞 *Телефон:* \`${order.phone}\`\n`;
-        message += `📍 *Адрес:* ${order.address}\n\n`;
-        message += `🔧 *Тип техники:* ${order.type_equipment}\n`;
-        message += `⚠️ *Проблема:* ${order.problem}\n\n`;
+        message += `🏢 *РК:* ${updatedOrder.rk}\n`;
+        message += `🏙️ *Город:* ${updatedOrder.city}\n`;
+        message += `👨‍🔧 *Имя мастера:* ${updatedOrder.avito_name || 'Не указано'}\n`;
+        message += `📝 *Тип заявки:* ${updatedOrder.type_order}\n\n`;
+        message += `👤 *Имя клиента:* ${updatedOrder.client_name}\n`;
+        message += `📞 *Телефон:* \`${updatedOrder.phone}\`\n`;
+        message += `📍 *Адрес:* ${updatedOrder.address}\n\n`;
+        message += `🔧 *Тип техники:* ${updatedOrder.type_equipment}\n`;
+        message += `⚠️ *Проблема:* ${updatedOrder.problem}\n\n`;
         message += `📅 *Дата встречи:* ${dateStr} ${timeStr}\n\n`;
         message += `👨‍🔧 *Назначен мастер:* ${masterName}`;
 
@@ -327,36 +337,48 @@ class OrderDetailsHandler {
   // Обработка статуса "В пути"
   async handleOnWay(ctx, orderId) {
     try {
-      await db.getClient().query(`
+      console.log(`🔍 handleOnWay вызван для заявки #${orderId}`);
+
+      // Обновляем статус заявки на "В пути"
+      const updateResult = await db.getClient().query(`
         UPDATE orders 
         SET status_order = 'В пути'
         WHERE id = $1
       `, [orderId]);
-
-      const orders = await db.searchOrder(orderId);
-      const order = orders[0];
       
-      const meetingDate = new Date(order.date_meeting);
+      console.log(`🔍 Результат обновления: ${updateResult.rowCount} строк обновлено`);
+      
+      if (updateResult.rowCount === 0) {
+        console.log(`❌ Не удалось обновить заявку #${orderId}`);
+        ctx.reply('❌ Ошибка при обновлении статуса');
+        return;
+      }
+
+      // Получаем обновленную информацию о заявке для отображения
+      const updatedOrders = await db.searchOrder(orderId);
+      const updatedOrder = updatedOrders[0];
+      
+      const meetingDate = new Date(updatedOrder.date_meeting);
       const dateStr = meetingDate.toLocaleDateString('ru-RU');
       const timeStr = meetingDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 
         // Получаем информацию о мастере
         const masters = await db.getClient().query(`
           SELECT name FROM master WHERE id = $1
-        `, [order.master_id]);
+        `, [updatedOrder.master_id]);
         
         const masterName = masters.rows.length > 0 ? masters.rows[0].name : 'Не указано';
 
         let message = `📋 *№${orderId}* | В пути\n\n`;
-        message += `🏢 *РК:* ${order.rk}\n`;
-        message += `🏙️ *Город:* ${order.city}\n`;
-        message += `👨‍🔧 *Имя мастера:* ${order.avito_name || 'Не указано'}\n`;
-        message += `📝 *Тип заявки:* ${order.type_order}\n\n`;
-        message += `👤 *Имя клиента:* ${order.client_name}\n`;
-        message += `📞 *Телефон:* \`${order.phone}\`\n`;
-        message += `📍 *Адрес:* ${order.address}\n\n`;
-        message += `🔧 *Тип техники:* ${order.type_equipment}\n`;
-        message += `⚠️ *Проблема:* ${order.problem}\n\n`;
+        message += `🏢 *РК:* ${updatedOrder.rk}\n`;
+        message += `🏙️ *Город:* ${updatedOrder.city}\n`;
+        message += `👨‍🔧 *Имя мастера:* ${updatedOrder.avito_name || 'Не указано'}\n`;
+        message += `📝 *Тип заявки:* ${updatedOrder.type_order}\n\n`;
+        message += `👤 *Имя клиента:* ${updatedOrder.client_name}\n`;
+        message += `📞 *Телефон:* \`${updatedOrder.phone}\`\n`;
+        message += `📍 *Адрес:* ${updatedOrder.address}\n\n`;
+        message += `🔧 *Тип техники:* ${updatedOrder.type_equipment}\n`;
+        message += `⚠️ *Проблема:* ${updatedOrder.problem}\n\n`;
         message += `📅 *Дата встречи:* ${dateStr} ${timeStr}\n\n`;
         message += `👨‍🔧 *Назначен мастер:* ${masterName}`;
 
@@ -377,36 +399,48 @@ class OrderDetailsHandler {
   // Обработка статуса "В работе"
   async handleInWork(ctx, orderId) {
     try {
-      await db.getClient().query(`
+      console.log(`🔍 handleInWork вызван для заявки #${orderId}`);
+
+      // Обновляем статус заявки на "В работе"
+      const updateResult = await db.getClient().query(`
         UPDATE orders 
         SET status_order = 'В работе'
         WHERE id = $1
       `, [orderId]);
-
-      const orders = await db.searchOrder(orderId);
-      const order = orders[0];
       
-      const meetingDate = new Date(order.date_meeting);
+      console.log(`🔍 Результат обновления: ${updateResult.rowCount} строк обновлено`);
+      
+      if (updateResult.rowCount === 0) {
+        console.log(`❌ Не удалось обновить заявку #${orderId}`);
+        ctx.reply('❌ Ошибка при обновлении статуса');
+        return;
+      }
+
+      // Получаем обновленную информацию о заявке для отображения
+      const updatedOrders = await db.searchOrder(orderId);
+      const updatedOrder = updatedOrders[0];
+      
+      const meetingDate = new Date(updatedOrder.date_meeting);
       const dateStr = meetingDate.toLocaleDateString('ru-RU');
       const timeStr = meetingDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 
         // Получаем информацию о мастере
         const masters = await db.getClient().query(`
           SELECT name FROM master WHERE id = $1
-        `, [order.master_id]);
+        `, [updatedOrder.master_id]);
         
         const masterName = masters.rows.length > 0 ? masters.rows[0].name : 'Не указано';
 
         let message = `📋 *№${orderId}* | В работе\n\n`;
-        message += `🏢 *РК:* ${order.rk}\n`;
-        message += `🏙️ *Город:* ${order.city}\n`;
-        message += `👨‍🔧 *Имя мастера:* ${order.avito_name || 'Не указано'}\n`;
-        message += `📝 *Тип заявки:* ${order.type_order}\n\n`;
-        message += `👤 *Имя клиента:* ${order.client_name}\n`;
-        message += `📞 *Телефон:* \`${order.phone}\`\n`;
-        message += `📍 *Адрес:* ${order.address}\n\n`;
-        message += `🔧 *Тип техники:* ${order.type_equipment}\n`;
-        message += `⚠️ *Проблема:* ${order.problem}\n\n`;
+        message += `🏢 *РК:* ${updatedOrder.rk}\n`;
+        message += `🏙️ *Город:* ${updatedOrder.city}\n`;
+        message += `👨‍🔧 *Имя мастера:* ${updatedOrder.avito_name || 'Не указано'}\n`;
+        message += `📝 *Тип заявки:* ${updatedOrder.type_order}\n\n`;
+        message += `👤 *Имя клиента:* ${updatedOrder.client_name}\n`;
+        message += `📞 *Телефон:* \`${updatedOrder.phone}\`\n`;
+        message += `📍 *Адрес:* ${updatedOrder.address}\n\n`;
+        message += `🔧 *Тип техники:* ${updatedOrder.type_equipment}\n`;
+        message += `⚠️ *Проблема:* ${updatedOrder.problem}\n\n`;
         message += `📅 *Дата встречи:* ${dateStr} ${timeStr}\n\n`;
         message += `👨‍🔧 *Назначен мастер:* ${masterName}`;
 
